@@ -13,7 +13,7 @@
 /**
  * Enable lives and the lives counter. The number next to the define is the number of lives you start with.
  */
-// #define ENABLE_LIVES 4
+ #define ENABLE_LIVES 4
 
 /**
  * This can be 0..127.
@@ -86,7 +86,7 @@
 /**
  * Adds multiple languages to the game. Just a placeholder for the most part, because it only works with EU, and must be enabled with EU.
  */
-#define MULTILANG (0 || VERSION_EU)
+//#define MULTILANG (0 || VERSION_EU)
 
 /**
  * Prevents infinite death loops by always restoring Mario's health when he's warped to any kind of warp while dead.
