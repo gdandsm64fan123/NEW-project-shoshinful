@@ -74,7 +74,174 @@ void print_fps(s32 x, s32 y) {
 #endif
 }
 
-// ------------ END OF FPS COUNER -----------------
+/**
+ * @brief Print a large texture to the screen.
+ * 
+ * This function can render an image of any size to the screen, supporting scale adjustments if desirable.
+ * Most of the primitive display list commands will still need to be set manually outside of this function
+ * (e.g. combiner, envcolor, texture filter, etc.)
+ * 
+ * Note that 1-cycle must be used with this function, as it will not render correctly with copy mode.
+ * 
+ * Display List Example Setup:
+ *   gDPPipeSync        (gDisplayListHead++);
+ *   gDPSetTexturePersp (gDisplayListHead++, G_TP_NONE);
+ *   gDPSetCombineMode  (gDisplayListHead++, G_CC_FADEA, G_CC_FADEA);
+ *   gDPSetTextureFilter(gDisplayListHead++, G_TF_POINT);
+ *   gDPSetCycleType    (gDisplayListHead++, G_CYC_1CYCLE);
+ *   gDPSetRenderMode   (gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+ *   gDPSetEnvColor     (gDisplayListHead++, 255, 255, 255, alpha);
+ *
+ *   draw_sprite(&gDisplayListHead, ...);
+ *
+ *   gDPPipeSync        (gDisplayListHead++);
+ *   gDPSetTexturePersp (gDisplayListHead++, G_TP_PERSP);
+ *   gDPSetCombineMode  (gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
+ *   gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
+ * 
+ * Helper function initially provided by devwizard (this has since been modified).
+ * 
+ * @param dl The address of the display list head to use. Most commonly, this will be "&gDisplayListHead".
+ * @param texture The address of the texture to be rendered to the screen.
+ * @param dlImgFormat The display list image format to be used for the texture.
+ *   This function does not currently support CI textures.
+ *   Example: "G_IM_FMT_RGBA"
+ * @param dlImgSize The bit depth to be used for the texture.
+ *   Example: "G_IM_SIZ_32b" for RGBA32 textures
+ * @param bilerp Boolean for whether bilinear filtering should be used instead of point filtering.
+ *   The actual texture filter display list command will need to be applied outside of this function.
+ * @param textureWidth The pixel width of the source texture file.
+ * @param textureHeight The pixel height of the source texture file.
+ * @param x The x position from the left side of the screen to the left side of the texture.
+ * @param y The y position from the top of the screen to the top of the texture.
+ * @param displayWidth How wide the image should render, in pixels. This should match textureWidth if no change.
+ * @param displayHeight How tall the image should render, in pixels. This should match textureHeight if no change.
+ */
+void draw_sprite(Gfx **dl, const void *texture, s32 dlImgFormat, s32 dlImgSize, s32 bilerp,
+        u32 textureWidth, u32 textureHeight, f32 x, f32 y, f32 displayWidth, f32 displayHeight) {
+    Gfx *dlHead = *dl;
+    s32 sizeLoad = dlImgSize;
+    s32 sizeLine = dlImgSize;
+    s32 shift = 0;
+
+    if (displayWidth <= 0.0f || displayHeight <= 0.0f) {
+        // Cannot display negative width/height
+        return;
+    }
+
+    u32 shiftedDisplayWidth = (u32) roundf(displayWidth * 4.0f);
+    u32 shiftedDisplayHeight = (u32) roundf(displayHeight * 4.0f);
+    s32 shiftedX = roundf(x * 4.0f);
+    s32 shiftedY = roundf(y * 4.0f);
+
+    if (shiftedDisplayWidth == 0 || shiftedDisplayHeight == 0 || textureWidth == 0 || textureHeight == 0) {
+        // Div by 0
+        return;
+    }
+
+    u32 cw = 16 * (0x2448 >> (4 * dlImgSize) & 0xF);
+    u32 ch = 16 * (0x2244 >> (4 * dlImgSize) & 0xF);
+    u32 dsdx = ((0x400 * 4 * textureWidth ) + (shiftedDisplayWidth  / 2)) / shiftedDisplayWidth;
+    u32 dtdy = ((0x400 * 4 * textureHeight) + (shiftedDisplayHeight / 2)) / shiftedDisplayHeight;
+
+    if (dlImgSize == G_IM_SIZ_4b) {
+        sizeLoad = G_IM_SIZ_8b;
+        shift = 1;
+    }
+    if (dlImgSize == G_IM_SIZ_32b) {
+        sizeLine = G_IM_SIZ_16b;
+    }
+    if (bilerp) {
+        cw -= 2 << shift;
+        ch -= 2 << shift;
+    }
+
+    gDPSetTextureImage(dlHead++, dlImgFormat, sizeLoad, textureWidth >> shift, texture);
+
+    for (u32 ty = 0; ty < textureHeight; ty += ch) {
+        u32 ult = ty;
+        u32 lrt = ty + ch;
+        if (lrt > textureHeight) {
+            lrt = textureHeight;
+        }
+
+        s32 yl = shiftedY + ult * shiftedDisplayHeight / textureHeight;
+        s32 yh = shiftedY + lrt * shiftedDisplayHeight / textureHeight;
+        if (yh < 0 || yl > 4096) {
+            continue;
+        }
+
+        s32 t = ult << 5;
+        if (yl < 0) {
+            t -= (yl * dtdy) >> 7;
+            yl = 0;
+        }
+
+        if (bilerp) {
+            if (ult > 0) {
+                ult -= (1 << shift);
+            }
+            if (lrt < textureHeight) {
+                lrt += (1 << shift);
+            }
+            t -= 16;
+        }
+
+        for (u32 tx = 0; tx < textureWidth; tx += cw) {
+            u32 uls = tx;
+            u32 lrs = tx + cw;
+            if (lrs > textureWidth) {
+                lrs = textureWidth;
+            }
+
+            s32 xl = shiftedX + uls * shiftedDisplayWidth / textureWidth;
+            s32 xh = shiftedX + lrs * shiftedDisplayWidth / textureWidth;
+            if (xh < 0 || xl > 4096) {
+                continue;
+            }
+
+            s32 s = uls << 5;
+            if (xl < 0) {
+                s -= (xl * dsdx) >> 7;
+                xl = 0;
+            }
+
+            if (bilerp) {
+                if (uls > 0) {
+                    uls -= (1 << shift);
+                }
+                if (lrs < textureWidth) {
+                    lrs += (1 << shift);
+                }
+                s -= 16;
+            }
+
+            u32 line = (((lrs - uls) << sizeLine) + 14) >> 4;
+
+            gDPPipeSync(dlHead++);
+            gDPSetTile(dlHead++, dlImgFormat, sizeLoad, line, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            gDPLoadSync(dlHead++);
+            gDPLoadTile(
+                dlHead++, 0,
+                (uls    ) << G_TEXTURE_IMAGE_FRAC >> shift,
+                (ult    ) << G_TEXTURE_IMAGE_FRAC,
+                (lrs - 1) << G_TEXTURE_IMAGE_FRAC >> shift,
+                (lrt - 1) << G_TEXTURE_IMAGE_FRAC);
+            gDPSetTile(
+                dlHead++, dlImgFormat, dlImgSize, line, 0, 0, 0,
+                G_TX_CLAMP, 0, 0, G_TX_CLAMP, 0, 0);
+            gDPSetTileSize(
+                dlHead++, 0,
+                (uls    ) << G_TEXTURE_IMAGE_FRAC,
+                (ult    ) << G_TEXTURE_IMAGE_FRAC,
+                (lrs - 1) << G_TEXTURE_IMAGE_FRAC,
+                (lrt - 1) << G_TEXTURE_IMAGE_FRAC);
+            gSPTextureRectangle(dlHead++, xl, yl, xh, yh, 0, s, t, dsdx, dtdy);
+        }
+    }
+
+    *dl = dlHead;
+}
 
 struct PowerMeterHUD {
     s8 animation;
@@ -194,6 +361,7 @@ void render_dl_power_meter(s16 numHealthWedges) {
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
 }
 
+
 /**
  * Power meter animation called when there's less than 8 health segments
  * Checks its timer to later change into deemphasizing mode.
@@ -268,6 +436,15 @@ void handle_power_meter_actions(s16 numHealthWedges) {
 #ifndef BREATH_METER
     // If Mario is swimming, keep power meter visible
     if (gPlayerCameraState->action & ACT_FLAG_SWIMMING) {
+        if (sPowerMeterHUD.animation == POWER_METER_HIDDEN
+            || sPowerMeterHUD.animation == POWER_METER_EMPHASIZED) {
+            sPowerMeterHUD.animation = POWER_METER_DEEMPHASIZING;
+            sPowerMeterHUD.y = HUD_POWER_METER_EMPHASIZED_Y;
+        }
+        sPowerMeterVisibleTimer = 0;
+    }
+    
+    if (gPlayerCameraState->action & ACT_IDLE ) {
         if (sPowerMeterHUD.animation == POWER_METER_HIDDEN
             || sPowerMeterHUD.animation == POWER_METER_EMPHASIZED) {
             sPowerMeterHUD.animation = POWER_METER_DEEMPHASIZING;
@@ -404,9 +581,9 @@ void render_hud_breath_meter(void) {
  * Renders the amount of lives Mario has.
  */
 void render_hud_mario_lives(void) {
-    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(22), HUD_TOP_Y, ","); // 'Mario Head' glyph
-    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(38), HUD_TOP_Y, "*"); // 'X' glyph
-    print_text_fmt_int(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(54), HUD_TOP_Y, "%d", gHudDisplay.lives);
+    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(12), HUD_TOP_Y, ","); // 'Mario Head' glyph
+    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(28), HUD_TOP_Y, "*"); // 'X' glyph
+    print_text_fmt_int(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(44), HUD_TOP_Y, "%02d", gHudDisplay.lives);
 }
 
 #ifdef VANILLA_STYLE_CUSTOM_DEBUG
@@ -427,7 +604,7 @@ void render_debug_mode(void) {
 void render_hud_coins(void) {
     print_text(HUD_COINS_X, HUD_TOP_Y, "$"); // 'Coin' glyph
     print_text((HUD_COINS_X + 16), HUD_TOP_Y, "*"); // 'X' glyph
-    print_text_fmt_int((HUD_COINS_X + 30), HUD_TOP_Y, "%d", gHudDisplay.coins);
+    print_text_fmt_int((HUD_COINS_X + 30), HUD_TOP_Y, "%02d", gHudDisplay.coins);
 }
 
 /**
@@ -440,7 +617,7 @@ void render_hud_stars(void) {
     print_text(GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(HUD_STARS_X), HUD_TOP_Y, "^"); // 'Star' glyph
     if (showX) print_text((GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(HUD_STARS_X) + 16), HUD_TOP_Y, "*"); // 'X' glyph
     print_text_fmt_int((showX * 14) + GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(HUD_STARS_X - 16),
-                       HUD_TOP_Y, "%d", gHudDisplay.stars);
+                       HUD_TOP_Y, "%02d", gHudDisplay.stars);
 }
 
 /**
@@ -500,7 +677,7 @@ void set_hud_camera_status(s16 status) {
 void render_hud_camera_status(void) {
     Texture *(*cameraLUT)[6] = segmented_to_virtual(&main_hud_camera_lut);
     s32 x = GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(HUD_CAMERA_X);
-    s32 y = 205;
+    s32 y = 999;
 
     if (sCameraHUD.status == CAM_STATUS_NONE) {
         return;
