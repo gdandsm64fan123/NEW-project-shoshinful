@@ -281,9 +281,9 @@ Princess Toadstool"))
 DEFINE_DIALOG(DIALOG_021, 1, 5, 95, 200, _("\
 Welcome.\n\
 No one's home!\n\
-Now " SCRAM "\n\
+Now scram--\n\
 and don't come back!\n\
-Gwa ha ha!"))
+Bwa ha ha!"))
 
 DEFINE_DIALOG(DIALOG_022, 1, 2, 95, 200, _("\
 You need a key to open\n\
@@ -333,29 +333,12 @@ Stars.\n\
 Bwa ha ha!"))
 
 DEFINE_DIALOG(DIALOG_030, 1, 6, 30, 200, _("\
-Hello! The Lakitu Bros.,\n\
-cutting in with a live\n\
-update on Mario's\n\
-progress. He's about to\n\
-learn a technique for\n\
-sneaking up on enemies.\n\
-The trick is this: He has\n\
-to walk very slowly in\n\
-order to walk quietly.\n\
-\n\
-\n\
-\n\
-And wrapping up filming\n\
-techniques reported on\n\
-earlier, you can take a\n\
-look around using [C]> and\n\
-[C]<. Press [C]| to view the\n\
-action from a distance.\n\
-When you can't move the\n\
-camera any farther, the\n\
-buzzer will sound. This is\n\
-the Lakitu Bros.,\n\
-signing off."))
+If you can climb this\n\
+mountain, you will be\n\
+super!\n\
+Check around for any\n\
+winged animals nearby\n\
+while you're at it..."))
 
 DEFINE_DIALOG(DIALOG_031, 1, 5, 30, 200, _("\
 No way! You beat me...\n\
@@ -384,18 +367,15 @@ around while flying, and\n\
 press [Z] to land."))
 
 DEFINE_DIALOG(DIALOG_033, 1, 6, 30, 200, _("\
-Ciao! You've reached\n\
-Princess Toadstool's\n\
-castle via a warp pipe.\n\
-Using the controller is a\n\
-piece of cake. Press [A] to\n\
-jump and [B] to attack.\n\
-Press [B] to read signs,\n\
-too. Use the Control Stick\n\
-in the center of the\n\
-controller to move Mario\n\
-around. Now, head for\n\
-the castle."))
+Welcome to Mario Wonderland!\n\
+This is home to where you\n\
+will start the game.\n\
+Feel free to have a\n\
+small tutorial with\n\
+yourself here, but if you\n\
+are the adventurous sort,\n\
+then pay a visit to the\n\
+castle ahead."))
 
 DEFINE_DIALOG(DIALOG_034, 1, 6, 30, 200, _("\
 Good afternoon. The\n\
@@ -1404,26 +1384,25 @@ from the menu. For now,\n\
 farewell."))
 
 DEFINE_DIALOG(DIALOG_117, 1, 1, 95, 200, _("\
-Who...walk...here?\n\
-Who...break...seal?\n\
-Wake..ancient..ones?\n\
-We no like light...\n\
-Rrrrummbbble...\n\
-We no like...intruders!\n\
-Now battle...\n\
-...hand...\n\
-...to...\n\
-...hand!"))
+So, we surprised you,\n\
+didn't we?\n\
+That's too bad,\n\
+Mario! We have an even\n\
+bigger surprise yet in\n\
+store!\n\
+Now let us...\n\
+...give you...\n\
+...a hand!"))
 
 DEFINE_DIALOG(DIALOG_118, 1, 6, 95, 200, _("\
-Grrrrumbbble!\n\
-What...happen?\n\
-We...crushed like pebble.\n\
-You so strong!\n\
-You rule ancient pyramid!\n\
-For today...\n\
-Now, take Star of Power.\n\
-We...sleep...darkness."))
+This is a surprise!\n\
+You're stronger than we\n\
+expected...\n\
+quite a handful, indeed!\n\
+The pyramid is yours\n\
+for today.\n\
+Take this Star to use\n\
+as you please.
 
 DEFINE_DIALOG(DIALOG_119, 1, 6, 30, 200, _("\
 Grrr! I was a bit\n\
@@ -1878,11 +1857,8 @@ back and visit anytime."))
 DEFINE_DIALOG(DIALOG_153, 1, 4, 30, 200, _("\
 Hey! Who's there?\n\
 What's climbing on me?\n\
-Is it an ice ant?\n\
-A snow flea?\n\
-Whatever it is, it's\n\
-bugging me! I think I'll\n\
-blow it away!"))
+I think I'll blow you\n\
+away!"))
 
 DEFINE_DIALOG(DIALOG_154, 1, 5, 30, 200, _("\
 Hold on to your hat! If\n\
